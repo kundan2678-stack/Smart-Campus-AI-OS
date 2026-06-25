@@ -1,0 +1,77 @@
+.faculty-dashboard h2 {
+  margin-bottom: 2rem;
+  color: #333;
+}
+
+.live-attendance {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.live-attendance h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.attendance-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.detail-item span {
+  color: #666;
+  font-weight: 500;
+}
+
+.detail-item strong {
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.classes-section {
+  margin-top: 2rem;
+}
+
+.classes-section h3 {
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+.classes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.class-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #667eea;
+}
+
+.class-card h4 {
+  margin-top: 0;
+  color: #333;
+}
+
+.class-card p {
+  margin: 0.5rem 0;
+  color: #666;
+  font-size: 0.95rem;
+}
