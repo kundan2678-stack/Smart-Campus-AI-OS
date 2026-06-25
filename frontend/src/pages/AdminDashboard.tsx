@@ -50,7 +50,7 @@ const AdminDashboard: React.FC = () => {
           <div className="stat-value">{dashboard?.totalFaculty}</div>
         </div>
         <div className="stat-card">
-          <h4>🟢 Active Students</h4>
+          <h4>🏢 Active Students</h4>
           <div className="stat-value">{dashboard?.activeStudents}</div>
         </div>
         <div className="stat-card">
