@@ -1,68 +1,86 @@
-import express from 'express';
+import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
+import winston from 'winston';
+import { Pool } from 'pg';
+import mongoose from 'mongoose';
+import redis from 'redis';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+
+// Import routes
 import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/user.routes';
 import studentRoutes from './routes/student.routes';
 import facultyRoutes from './routes/faculty.routes';
 import adminRoutes from './routes/admin.routes';
-import aiRoutes from './routes/ai.routes';
-import errorHandler from './middleware/errorHandler';
-import logger from './utils/logger';
+import assignmentRoutes from './routes/assignment.routes';
+import attendanceRoutes from './routes/attendance.routes';
+
+// Import middleware
+import { errorHandler, requestLogger } from './middleware/error.middleware';
+import { authenticateToken } from './middleware/auth.middleware';
 
 dotenv.config();
 
-const app = express();
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
-    credentials: true,
-  },
+const app: Express = express();
+const server = http.createServer(app);
+const io = new SocketIOServer(server, {
+  cors: { origin: process.env.CLIENT_URL || 'http://localhost:3000' }
 });
 
-const PORT = process.env.PORT || 3000;
+// Logger setup
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  transports: [
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log' }),
+    new winston.transports.Console({
+      format: winston.format.simple()
+    })
+  ]
+});
 
 // Middleware
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Routes
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/students', studentRoutes);
-app.use('/api/v1/faculty', facultyRoutes);
-app.use('/api/v1/admin', adminRoutes);
-app.use('/api/v1/ai', aiRoutes);
-
-// WebSocket setup
-io.on('connection', (socket) => {
-  logger.info(`User connected: ${socket.id}`);
-
-  socket.on('subscribe', (data) => {
-    socket.join(data.channel);
-    logger.info(`Socket ${socket.id} subscribed to ${data.channel}`);
-  });
-
-  socket.on('disconnect', () => {
-    logger.info(`User disconnected: ${socket.id}`);
-  });
-});
-
-// Export io for use in other modules
-app.set('io', io);
-
-// Error handler
-app.use(errorHandler);
+app.use(cors());
+app.use(requestLogger);
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date() });
+app.get('/health', (req: Request, res: Response) => {
+  res.json({ status: 'Backend is running', timestamp: new Date() });
 });
 
-httpServer.listen(PORT, () => {
-  logger.info(`🚀 Smart Campus API Gateway running on port ${PORT}`);
+// Routes (Public)
+app.use('/auth', authRoutes);
+
+// Routes (Protected)
+app.use('/users', authenticateToken, userRoutes);
+app.use('/students', authenticateToken, studentRoutes);
+app.use('/faculty', authenticateToken, facultyRoutes);
+app.use('/admin', authenticateToken, adminRoutes);
+app.use('/assignments', authenticateToken, assignmentRoutes);
+app.use('/attendance', authenticateToken, attendanceRoutes);
+
+// WebSocket events
+io.on('connection', (socket) => {
+  console.log(`User connected: ${socket.id}`);
+  
+  socket.on('disconnect', () => {
+    console.log(`User disconnected: ${socket.id}`);
+  });
 });
 
-export { app, io };
+// Error handling middleware
+app.use(errorHandler);
+
+// Start server
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+  logger.info(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+
+export { app, io, logger };

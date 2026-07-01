@@ -1,150 +1,99 @@
-import { Router, Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
+import express, { Request, Response } from 'express';
+import bcryptjs from 'bcryptjs';
 import jwt from 'jwt-simple';
-import logger from '../utils/logger';
+import { User } from '../models/User';
+import dotenv from 'dotenv';
 
-const router = Router();
-const secret = process.env.JWT_SECRET || 'your-secret-key';
+dotenv.config();
 
-// Mock database
-const users: any[] = [];
+const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_EXPIRY = parseInt(process.env.JWT_EXPIRY || '86400'); // 24 hours
 
-interface RegisterBody {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  role: 'student' | 'faculty' | 'admin';
-}
-
-interface LoginBody {
-  email: string;
-  password: string;
-}
-
-/**
- * Register a new user
- * POST /auth/register
- */
+// Register
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { email, password, firstName, lastName, role } = req.body as RegisterBody;
+    const { firstName, lastName, email, password, role } = req.body;
 
-    // Validation
-    if (!email || !password || !firstName || !lastName || !role) {
+    // Validate input
+    if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
     // Check if user exists
-    if (users.find(u => u.email === email)) {
-      return res.status(400).json({ error: 'User already exists' });
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ error: 'User already exists' });
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcryptjs.hash(password, 10);
 
     // Create user
-    const user = {
-      id: `user_${Date.now()}`,
-      email,
-      password: hashedPassword,
+    const user = new User({
       firstName,
       lastName,
-      role,
-      createdAt: new Date(),
-    };
+      email,
+      password: hashedPassword,
+      role: role || 'student'
+    });
 
-    users.push(user);
+    await user.save();
 
-    // Generate token
     const token = jwt.encode(
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 days
-      },
-      secret
+      { id: user._id, email: user.email, role: user.role },
+      JWT_SECRET
     );
 
-    logger.info(`User registered: ${email}`);
-
     res.status(201).json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
+      message: 'User registered successfully',
+      user: { id: user._id, email: user.email, role: user.role },
+      token
     });
-  } catch (error) {
-    logger.error('Registration error:', error);
-    res.status(500).json({ error: 'Registration failed' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
-/**
- * Login user
- * POST /auth/login
- */
+// Login
 router.post('/login', async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body as LoginBody;
+    const { email, password } = req.body;
 
-    // Validation
+    // Validate input
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
     }
 
     // Find user
-    const user = users.find(u => u.email === email);
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Verify password
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
+    const isPasswordValid = await bcryptjs.compare(password, user.password);
+    if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Generate token
     const token = jwt.encode(
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
-      },
-      secret
+      { id: user._id, email: user.email, role: user.role },
+      JWT_SECRET
     );
 
-    logger.info(`User logged in: ${email}`);
-
     res.json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
+      message: 'Login successful',
+      user: { id: user._id, email: user.email, role: user.role },
+      token
     });
-  } catch (error) {
-    logger.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
-/**
- * Refresh token
- * POST /auth/refresh-token
- */
+// Refresh Token
 router.post('/refresh-token', (req: Request, res: Response) => {
   try {
     const { token } = req.body;
@@ -153,21 +102,14 @@ router.post('/refresh-token', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Token required' });
     }
 
-    const decoded = jwt.decode(token, secret);
+    const decoded = jwt.decode(token, JWT_SECRET);
     const newToken = jwt.encode(
-      {
-        id: decoded.id,
-        email: decoded.email,
-        role: decoded.role,
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
-      },
-      secret
+      { id: decoded.id, email: decoded.email, role: decoded.role },
+      JWT_SECRET
     );
 
     res.json({ token: newToken });
-  } catch (error) {
-    logger.error('Token refresh error:', error);
+  } catch (error: any) {
     res.status(403).json({ error: 'Invalid token' });
   }
 });

@@ -1,112 +1,68 @@
-import { Router, Request, Response } from 'express';
-import { authenticateToken, authorize } from '../middleware/auth.middleware';
-import logger from '../utils/logger';
+import express, { Request, Response } from 'express';
+import { Faculty } from '../models/Faculty';
+import { AuthRequest, authorizeRole } from '../middleware/auth.middleware';
 
-const router = Router();
+const router = express.Router();
 
-/**
- * Get live attendance for faculty
- * GET /faculty/:facultyId/attendance-live
- */
-router.get('/:facultyId/attendance-live', authenticateToken, authorize(['faculty', 'admin']), (req: Request, res: Response) => {
+// Get faculty dashboard
+router.get('/dashboard', async (req: AuthRequest, res: Response) => {
   try {
-    const { facultyId } = req.params;
-
-    const liveAttendance = {
-      courseId: 'CS101',
-      courseName: 'Data Structures',
-      currentClass: new Date(),
-      totalStudents: 60,
-      presentStudents: 58,
-      absentStudents: 2,
-      attendancePercentage: 96.7,
-      lateStudents: [
-        { roll: 'A001', name: 'John Doe', arrivalTime: '09:15' },
-      ],
-    };
-
-    logger.info(`Live attendance fetched for faculty: ${facultyId}`);
-    res.json(liveAttendance);
-  } catch (error) {
-    logger.error('Error fetching live attendance:', error);
-    res.status(500).json({ error: 'Failed to fetch live attendance' });
-  }
-});
-
-/**
- * Get faculty classes
- * GET /faculty/:facultyId/classes
- */
-router.get('/:facultyId/classes', authenticateToken, authorize(['faculty', 'admin']), (req: Request, res: Response) => {
-  try {
-    const { facultyId } = req.params;
-
-    const classes = [
-      {
-        courseId: 'CS101',
-        courseName: 'Data Structures',
-        semester: 3,
-        students: 60,
-        schedule: 'Mon, Wed, Fri 09:00-10:30',
-      },
-    ];
-
-    res.json(classes);
-  } catch (error) {
-    logger.error('Error fetching classes:', error);
-    res.status(500).json({ error: 'Failed to fetch classes' });
-  }
-});
-
-/**
- * Post grades
- * POST /faculty/:facultyId/grades
- */
-router.post('/:facultyId/grades', authenticateToken, authorize(['faculty', 'admin']), (req: Request, res: Response) => {
-  try {
-    const { facultyId } = req.params;
-    const { courseId, studentId, marks, grade } = req.body;
-
-    logger.info(`Grade posted for student ${studentId} in course ${courseId}`);
+    const faculty = await Faculty.findOne({ userId: req.user.id });
+    if (!faculty) {
+      return res.status(404).json({ error: 'Faculty not found' });
+    }
 
     res.json({
-      success: true,
-      message: 'Grade posted successfully',
-      data: { studentId, courseId, marks, grade },
+      faculty,
+      stats: {
+        totalClasses: faculty.classes.length,
+        department: faculty.department,
+        experience: faculty.experience
+      }
     });
-  } catch (error) {
-    logger.error('Error posting grades:', error);
-    res.status(500).json({ error: 'Failed to post grades' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
-/**
- * Get faculty analytics
- * GET /faculty/:facultyId/analytics
- */
-router.get('/:facultyId/analytics', authenticateToken, authorize(['faculty', 'admin']), (req: Request, res: Response) => {
+// Get faculty classes
+router.get('/classes', async (req: AuthRequest, res: Response) => {
   try {
-    const { facultyId } = req.params;
+    const faculty = await Faculty.findOne({ userId: req.user.id });
+    if (!faculty) {
+      return res.status(404).json({ error: 'Faculty not found' });
+    }
+    res.json({ classes: faculty.classes });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-    const analytics = {
-      totalStudents: 60,
-      averageAttendance: 88.5,
-      averagePerformance: 3.6,
-      submissionRate: 92.5,
-      engagementScore: 82,
-      classAnalytics: [
-        {
-          date: new Date(),
-          presentStudents: 58,
-          absentStudents: 2,
-        },
-      ],
-    };
+// Get live attendance for a class
+router.get('/classes/:classId/attendance', async (req: Request, res: Response) => {
+  try {
+    res.json({ message: 'Live attendance data' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-    res.json(analytics);
-  } catch (error) {
-    logger.error('Error fetching analytics:', error);
-    res.status(500).json({ error: 'Failed to fetch analytics' });
+// Submit grades for students
+router.post('/grades', async (req: Request, res: Response) => {
+  try {
+    const { studentId, classId, grade, marks } = req.body;
+    res.json({ message: 'Grade submitted successfully' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get faculty analytics
+router.get('/analytics', async (req: AuthRequest, res: Response) => {
+  try {
+    res.json({ analytics: {} });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
