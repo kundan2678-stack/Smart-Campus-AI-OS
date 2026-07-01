@@ -1,113 +1,83 @@
 import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
 import axios from 'axios';
-import './AdminDashboard.css';
+import Navbar from '../components/Navbar';
+import StatCard from '../components/StatCard';
 
 const AdminDashboard: React.FC = () => {
-  const token = useSelector((state: any) => state.auth.token);
   const [dashboard, setDashboard] = useState<any>(null);
-  const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchDashboard = async () => {
       try {
-        const [dashRes, analyticsRes] = await Promise.all([
-          axios.get('http://localhost:3000/api/v1/admin/dashboard', {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get('http://localhost:3000/api/v1/admin/analytics?metric=attendance', {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
-        setDashboard(dashRes.data);
-        setAnalytics(analyticsRes.data);
+        const response = await axios.get('http://localhost:5000/admin/dashboard', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setDashboard(response.data.dashboard);
       } catch (error) {
-        console.error('Error fetching admin data:', error);
+        console.error('Error fetching dashboard:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    if (token) {
-      fetchData();
-    }
+    fetchDashboard();
   }, [token]);
 
-  if (loading) return <div className="loading">Loading...</div>;
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+  }
 
   return (
-    <div className="admin-dashboard">
-      <h2>👨‍💼 Admin Dashboard</h2>
-      
-      <div className="stats-grid">
-        <div className="stat-card">
-          <h4>👥 Total Students</h4>
-          <div className="stat-value">{dashboard?.totalStudents}</div>
-        </div>
-        <div className="stat-card">
-          <h4>👨‍🏫 Total Faculty</h4>
-          <div className="stat-value">{dashboard?.totalFaculty}</div>
-        </div>
-        <div className="stat-card">
-          <h4>🏢 Active Students</h4>
-          <div className="stat-value">{dashboard?.activeStudents}</div>
-        </div>
-        <div className="stat-card">
-          <h4>📊 Avg Attendance</h4>
-          <div className="stat-value">{dashboard?.averageAttendance}%</div>
-        </div>
-        <div className="stat-card">
-          <h4>💼 Placement Rate</h4>
-          <div className="stat-value">{dashboard?.placementRate}%</div>
-        </div>
-        <div className="stat-card">
-          <h4>💰 Avg Package</h4>
-          <div className="stat-value">{dashboard?.avgPackage} LPA</div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-100">
+      <Navbar />
+      <div className="container mx-auto p-6">
+        <h1 className="text-4xl font-bold text-gray-800 mb-8">Admin Dashboard</h1>
 
-      <div className="campus-occupancy">
-        <h3>🏫 Campus Occupancy</h3>
-        <div className="occupancy-grid">
-          <div className="occupancy-item">
-            <span>Classrooms</span>
-            <div className="occupancy-bar">
-              <div className="occupancy-fill" style={{ width: `${dashboard?.campusOccupancy?.classrooms}%` }}></div>
-            </div>
-            <span className="percentage">{dashboard?.campusOccupancy?.classrooms}%</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <StatCard
+            title="Total Students"
+            value={dashboard?.totalStudents || '0'}
+            icon="👥"
+            bgColor="bg-blue-100"
+          />
+          <StatCard
+            title="Total Faculty"
+            value={dashboard?.totalFaculty || '0'}
+            icon="👨‍🏫"
+            bgColor="bg-green-100"
+          />
+          <StatCard
+            title="Total Classes"
+            value={dashboard?.totalClasses || '0'}
+            icon="📚"
+            bgColor="bg-purple-100"
+          />
+          <StatCard
+            title="Avg Attendance"
+            value={`${dashboard?.averageAttendance || 0}%`}
+            icon="📊"
+            bgColor="bg-yellow-100"
+          />
+          <StatCard
+            title="Placement Rate"
+            value={`${dashboard?.placementRate || 0}%`}
+            icon="💼"
+            bgColor="bg-red-100"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Campus Overview</h2>
+            <p className="text-gray-600">Real-time campus analytics</p>
           </div>
-          <div className="occupancy-item">
-            <span>Labs</span>
-            <div className="occupancy-bar">
-              <div className="occupancy-fill" style={{ width: `${dashboard?.campusOccupancy?.labs}%` }}></div>
-            </div>
-            <span className="percentage">{dashboard?.campusOccupancy?.labs}%</span>
-          </div>
-          <div className="occupancy-item">
-            <span>Library</span>
-            <div className="occupancy-bar">
-              <div className="occupancy-fill" style={{ width: `${dashboard?.campusOccupancy?.library}%` }}></div>
-            </div>
-            <span className="percentage">{dashboard?.campusOccupancy?.library}%</span>
-          </div>
-          <div className="occupancy-item">
-            <span>Hostel</span>
-            <div className="occupancy-bar">
-              <div className="occupancy-fill" style={{ width: `${dashboard?.campusOccupancy?.hostel}%` }}></div>
-            </div>
-            <span className="percentage">{dashboard?.campusOccupancy?.hostel}%</span>
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Reports</h2>
+            <p className="text-gray-600">Generate detailed reports</p>
           </div>
         </div>
-      </div>
-
-      <div className="alerts-section">
-        <h3>⚠️ System Alerts</h3>
-        {dashboard?.alerts?.map((alert: any, idx: number) => (
-          <div key={idx} className={`alert alert-${alert.severity}`}>
-            <strong>{alert.type}:</strong> {alert.count} issues
-          </div>
-        ))}
       </div>
     </div>
   );

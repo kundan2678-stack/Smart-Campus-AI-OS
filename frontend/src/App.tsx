@@ -2,33 +2,46 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import store from './store';
-import Layout from './components/Layout';
+
+// Pages
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import StudentDashboard from './pages/StudentDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
 import AdminDashboard from './pages/AdminDashboard';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import AIChat from './pages/AIChat';
-import './App.css';
+import ProfilePage from './pages/ProfilePage';
+import AttendancePage from './pages/AttendancePage';
+import GradesPage from './pages/GradesPage';
+import AssignmentsPage from './pages/AssignmentsPage';
 
-function App() {
+// Components
+import ProtectedRoute from './components/ProtectedRoute';
+import Navbar from './components/Navbar';
+
+const App: React.FC = () => {
   return (
     <Provider store={store}>
       <Router>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route element={<Layout />}>
-            <Route path="/student" element={<StudentDashboard />} />
-            <Route path="/faculty" element={<FacultyDashboard />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/ai-chat" element={<AIChat />} />
-            <Route path="/" element={<Navigate to="/student" />} />
+          {/* Public Routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+
+          {/* Protected Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<StudentDashboard />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/grades" element={<GradesPage />} />
+            <Route path="/assignments" element={<AssignmentsPage />} />
+            <Route path="/faculty/*" element={<FacultyDashboard />} />
+            <Route path="/admin/*" element={<AdminDashboard />} />
           </Route>
         </Routes>
       </Router>
     </Provider>
   );
-}
+};
 
 export default App;
